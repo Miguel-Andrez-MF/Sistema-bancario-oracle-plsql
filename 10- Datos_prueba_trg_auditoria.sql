@@ -1,0 +1,33 @@
+--DATOS PARA PROBAR
+-- =======================================
+-- SCRIPT DE PRUEBAS: TRG_INSERTAR_AUDITORIA_TRANSACCION
+-- =======================================
+
+INSERT INTO PROYECTODB.TBL_TRANSACCIONES (
+    TRANSACCION_ID,
+    CUENTA_ID,
+    TIPO_TRANSAC_ID,
+    MONTO,
+    FECHA_TRANSAC
+) VALUES (
+    PROYECTODB.SEQ_TRANSACCION.NEXTVAL,  
+    'CTA-2',               
+    7,                        
+    500000,                   
+    SYSDATE                   
+);
+COMMIT;
+
+
+UPDATE PROYECTODB.TBL_TRANSACCIONES
+SET MONTO = 342000  -- nuevo monto, antes era 500000
+WHERE TRANSACCION_ID =1209;
+
+COMMIT;
+
+UPDATE PROYECTODB.TBL_TRANSACCIONES
+SET 
+    MONTO = 400000,           
+    TIPO_TRANSAC_ID = 8       
+WHERE TRANSACCION_ID = 1209;
+COMMIT;
