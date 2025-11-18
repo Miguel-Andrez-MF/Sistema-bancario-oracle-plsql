@@ -7,9 +7,19 @@ CREATE OR REPLACE TRIGGER PROYECTODB.TRG_VALIDA_TRANSACCION_RETIRO
     FOR EACH ROW
 DECLARE
 
+    -- Variables
     v_saldo_actual NUMBER;
-    v_estado_nombre VARCHAR2(20);
-    v_tipo_transaccion VARCHAR2(20);
+    v_estado_valor NUMBER;
+    v_tipo_transaccion_valor NUMBER;
+    
+    -- Constantes
+    c_TIPO_DEPOSITO CONSTANT NUMBER := 10;
+    c_TIPO_RETIRO CONSTANT NUMBER := 11;
+    c_TIPO_TRANSFERENCIA CONSTANT NUMBER := 12;
+    
+    c_ESTADO_ACTIVA CONSTANT NUMBER := 1;
+    c_ESTADO_INACTIVA CONSTANT NUMBER := 2;
+    c_ESTADO_BLOQUEADA CONSTANT NUMBER := 3;
 
 
     cuenta_inactiva EXCEPTION;
@@ -30,27 +40,36 @@ BEGIN
         SELECT NOMBRE
         INTO v_tipo_transaccion
         FROM PROYECTODB.TBL_TIPOS_PARAMETROS
-        WHERE TIPO_PARAMETRO_ID = :NEW.TIPO_TRANSAC_ID;
+        WHERE TIPO_PARAMETRO_ID = :NEW.TIPO_TRANSAC_ID
+        AND NOMBRE = 'TIPO_TRANSACCION';
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RAISE_APPLICATION_ERROR(-20103, 'Tipo de transacción inválido: ' || :NEW.TIPO_TRANSAC_ID);
     END;
 
-    IF UPPER(v_tipo_transaccion) = 'RETIRO' THEN
+    IF v_tipo_transaccion_valor = c_TIPO_RETIRO THEN
 
         BEGIN
-            SELECT C.SALDO, TP.NOMBRE
-            INTO v_saldo_actual, v_estado_nombre
-            FROM PROYECTODB.TBL_CUENTAS C
-                     JOIN PROYECTODB.TBL_TIPOS_PARAMETROS TP ON C.ESTADO_ID = TP.TIPO_PARAMETRO_ID
-            WHERE C.CUENTA_ID = :NEW.CUENTA_ID;
+            SELECT C.SALDO, TP.VALOR
+            INTO v_saldo_actual, v_estado_valor
+            FROM TBL_CUENTAS C
+            JOIN TBL_TIPOS_PARAMETROS TP ON C.ESTADO_ID = TP.TIPO_PARAMETRO_ID
+            WHERE C.CUENTA_ID = :NEW.CUENTA_ID
+            AND TP.NOMBRE = 'ESTADO';
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
                 RAISE_APPLICATION_ERROR(-20102, 'La cuenta ' || :NEW.CUENTA_ID || ' no existe');
         END;
 
-        IF UPPER(v_estado_nombre) != 'ACTIVA' THEN
-            RAISE_APPLICATION_ERROR(-20100, 'No se puede realizar el retiro. La cuenta está ' || v_estado_nombre);
+        IF v_estado_valor != c_ESTADO_ACTIVA THEN  -- ⬅️ Más legible
+            RAISE_APPLICATION_ERROR(-20100, 
+                'No se puede realizar el retiro. La cuenta está ' ||
+                CASE v_estado_valor
+                    WHEN c_ESTADO_ACTIVA THEN 'ACTIVA'
+                    WHEN c_ESTADO_INACTIVA THEN 'INACTIVA'
+                    WHEN c_ESTADO_BLOQUEADA THEN 'BLOQUEADA'
+                    ELSE 'EN ESTADO DESCONOCIDO'
+                END);
         END IF;
 
 
