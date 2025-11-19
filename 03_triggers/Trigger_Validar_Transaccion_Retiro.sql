@@ -55,8 +55,8 @@ BEGIN
         BEGIN
             SELECT C.SALDO, TP.VALOR
             INTO v_saldo_actual, v_estado_valor
-            FROM TBL_CUENTAS C
-                     JOIN TBL_TIPOS_PARAMETROS TP ON C.ESTADO_ID = TP.TIPO_PARAMETRO_ID
+            FROM PROYECTODB.TBL_CUENTAS C
+                     JOIN PROYECTODB.TBL_TIPOS_PARAMETROS TP ON C.ESTADO_ID = TP.TIPO_PARAMETRO_ID
             WHERE C.CUENTA_ID = :NEW.CUENTA_ID
               AND TP.NOMBRE = 'ESTADO';
         EXCEPTION
