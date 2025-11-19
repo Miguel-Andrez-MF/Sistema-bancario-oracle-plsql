@@ -203,7 +203,7 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         v_es_superadmin BOOLEAN;
     BEGIN
         -- Validar que sea SuperAdmin
-        v_es_superadmin := FN_ES_SUPERADMIN(p_usuario_id);
+        v_es_superadmin := PROYECTODB.AUTENTICACION_PKG.es_superadmin(p_usuario_id);
 
         IF NOT v_es_superadmin THEN
             RAISE_APPLICATION_ERROR(-20604, 

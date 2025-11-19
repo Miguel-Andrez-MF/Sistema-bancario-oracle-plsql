@@ -53,20 +53,15 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.AUTENTICACION_PKG IS
     -- ✅ FUNCIÓN: Hash de contraseñas (con STANDARD_HASH)
     -- =======================================
     FUNCTION hash_password(p_password IN VARCHAR2) RETURN VARCHAR2 IS
+        v_hash VARCHAR2(200);
     BEGIN
-        -- Usar STANDARD_HASH (disponible desde Oracle 12c)
-        -- SHA256 es más seguro que MD5
-        RETURN LOWER(STANDARD_HASH(p_password, 'SHA256'));
+        EXECUTE IMMEDIATE
+            'SELECT STANDARD_HASH(:1, ''SHA256'') FROM dual'
+            INTO v_hash
+            USING p_password;
 
-    EXCEPTION
-        WHEN OTHERS THEN
-            PROYECTODB.PRC_LOG_ERROR(
-                    'AUTENTICACION_PKG.hash_password',
-                    'Error al generar hash: ' || SQLERRM
-            );
-            RETURN NULL;
-    END hash_password;
-
+        RETURN LOWER(REPLACE(v_hash, '0x',''));
+    END;
 
     -- =======================================
     -- FUNCIÓN: Validar Credenciales (CON HASH)
