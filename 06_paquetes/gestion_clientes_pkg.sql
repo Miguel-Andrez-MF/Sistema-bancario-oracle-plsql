@@ -1,72 +1,51 @@
 -- =======================================
--- PAQUETE: gestion_clientes_pkg (SPEC)
--- Descripción: Gestión completa de clientes bancarios
+-- PAQUETE: gestion_clientes_pkg (SPEC) - CORREGIDO
 -- =======================================
 
 CREATE OR REPLACE PACKAGE PROYECTODB.gestion_clientes_pkg AS
 
-    -- ====================================
-    -- PROCEDIMIENTO: Crear Cliente
-    -- ====================================
     PROCEDURE crear_cliente(
         p_nombre IN VARCHAR2,
         p_identificacion IN NUMBER,
         p_direccion IN VARCHAR2,
+        p_telefono IN VARCHAR2,
+        p_email IN VARCHAR2,
         p_usuario_id IN NUMBER DEFAULT NULL,
         p_cliente_id OUT VARCHAR2,
         p_resultado OUT VARCHAR2
     );
 
-    -- ====================================
-    -- PROCEDIMIENTO: Actualizar Cliente
-    -- ====================================
     PROCEDURE actualizar_cliente(
         p_cliente_id IN VARCHAR2,
         p_nombre IN VARCHAR2 DEFAULT NULL,
         p_direccion IN VARCHAR2 DEFAULT NULL,
+        p_telefono IN VARCHAR2 DEFAULT NULL,
+        p_email IN VARCHAR2 DEFAULT NULL,
         p_resultado OUT VARCHAR2
     );
 
-    -- ====================================
-    -- PROCEDIMIENTO: Eliminar Cliente
-    -- ====================================
     PROCEDURE eliminar_cliente(
         p_cliente_id IN VARCHAR2,
         p_usuario_id IN NUMBER,
         p_resultado OUT VARCHAR2
     );
 
-    -- ====================================
-    -- PROCEDIMIENTO: Consultar Cliente
-    -- ====================================
     PROCEDURE consultar_cliente(
         p_cliente_id IN VARCHAR2
     );
 
-    -- ====================================
-    -- FUNCIÓN: Buscar Cliente por Identificación
-    -- ====================================
     FUNCTION buscar_por_identificacion(
         p_identificacion IN NUMBER
     ) RETURN VARCHAR2;
 
-    -- ====================================
-    -- FUNCIÓN: Listar Todos los Clientes
-    -- ====================================
     FUNCTION listar_clientes(
         p_filtro_nombre IN VARCHAR2 DEFAULT NULL
     ) RETURN SYS_REFCURSOR;
 
-    -- ====================================
-    -- PROCEDIMIENTO: Obtener Resumen del Cliente
-    -- ====================================
     PROCEDURE obtener_resumen_cliente(
         p_cliente_id IN VARCHAR2
     );
 
-    -- ====================================
-    -- FUNCIÓN: Validar si Cliente Existe
-    -- ====================================
     FUNCTION validar_cliente_existe(
         p_cliente_id IN VARCHAR2
     ) RETURN BOOLEAN;
@@ -75,18 +54,17 @@ END gestion_clientes_pkg;
 /
 
 -- =======================================
--- PAQUETE: gestion_clientes_pkg (BODY)
+-- PAQUETE: gestion_clientes_pkg (BODY) - CORREGIDO
 -- =======================================
 
 CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
 
-    -- ====================================
-    -- PROCEDIMIENTO: Crear Cliente
-    -- ====================================
     PROCEDURE crear_cliente(
         p_nombre IN VARCHAR2,
         p_identificacion IN NUMBER,
         p_direccion IN VARCHAR2,
+        p_telefono IN VARCHAR2,
+        p_email IN VARCHAR2,
         p_usuario_id IN NUMBER DEFAULT NULL,
         p_cliente_id OUT VARCHAR2,
         p_resultado OUT VARCHAR2
@@ -94,8 +72,9 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         v_count NUMBER;
         v_secuencia NUMBER;
     BEGIN
-        -- Validaciones
-        IF p_nombre IS NULL OR p_identificacion IS NULL OR p_direccion IS NULL THEN
+        -- Validaciones actualizadas
+        IF p_nombre IS NULL OR p_identificacion IS NULL OR
+           p_direccion IS NULL OR p_telefono IS NULL OR p_email IS NULL THEN
             RAISE_APPLICATION_ERROR(-20600, 'Todos los datos del cliente son obligatorios');
         END IF;
 
@@ -105,8 +84,8 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         WHERE IDENTIFICACION = p_identificacion;
 
         IF v_count > 0 THEN
-            RAISE_APPLICATION_ERROR(-20601, 
-                'Ya existe un cliente con la identificación: ' || p_identificacion);
+            RAISE_APPLICATION_ERROR(-20601,
+                                    'Ya existe un cliente con la identificación: ' || p_identificacion);
         END IF;
 
         -- Si se proporciona usuario_id, validar que existe
@@ -124,20 +103,24 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         SELECT COUNT(*) + 1 INTO v_secuencia FROM TBL_CLIENTES;
         p_cliente_id := 'CLI-' || LPAD(v_secuencia, 3, '0');
 
-        -- Insertar cliente
+        -- Insertar con todos los campos
         INSERT INTO TBL_CLIENTES (
             CLIENTE_ID,
             NOMBRE,
             IDENTIFICACION,
             DIRECCION,
+            TELEFONO,
+            EMAIL,
             USUARIO_ID
         ) VALUES (
-            p_cliente_id,
-            p_nombre,
-            p_identificacion,
-            p_direccion,
-            p_usuario_id
-        );
+                     p_cliente_id,
+                     p_nombre,
+                     p_identificacion,
+                     p_direccion,
+                     p_telefono,
+                     p_email,
+                     p_usuario_id
+                 );
 
         COMMIT;
 
@@ -152,18 +135,16 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE;
     END crear_cliente;
 
-    -- ====================================
-    -- PROCEDIMIENTO: Actualizar Cliente
-    -- ====================================
     PROCEDURE actualizar_cliente(
         p_cliente_id IN VARCHAR2,
         p_nombre IN VARCHAR2 DEFAULT NULL,
         p_direccion IN VARCHAR2 DEFAULT NULL,
+        p_telefono IN VARCHAR2 DEFAULT NULL,
+        p_email IN VARCHAR2 DEFAULT NULL,
         p_resultado OUT VARCHAR2
     ) IS
         v_count NUMBER;
     BEGIN
-        -- Validar que el cliente existe
         SELECT COUNT(*) INTO v_count
         FROM TBL_CLIENTES
         WHERE CLIENTE_ID = p_cliente_id;
@@ -172,10 +153,12 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE_APPLICATION_ERROR(-20603, 'El cliente no existe');
         END IF;
 
-        -- Actualizar solo los campos proporcionados
+        -- Actualizar con nuevos campos
         UPDATE TBL_CLIENTES
         SET NOMBRE = NVL(p_nombre, NOMBRE),
-            DIRECCION = NVL(p_direccion, DIRECCION)
+            DIRECCION = NVL(p_direccion, DIRECCION),
+            TELEFONO = NVL(p_telefono, TELEFONO),
+            EMAIL = NVL(p_email, EMAIL)
         WHERE CLIENTE_ID = p_cliente_id;
 
         COMMIT;
@@ -191,9 +174,7 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE;
     END actualizar_cliente;
 
-    -- ====================================
-    -- PROCEDIMIENTO: Eliminar Cliente
-    -- ====================================
+    -- Resto de procedimientos quedan igual
     PROCEDURE eliminar_cliente(
         p_cliente_id IN VARCHAR2,
         p_usuario_id IN NUMBER,
@@ -202,25 +183,22 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         v_count_cuentas NUMBER;
         v_es_superadmin BOOLEAN;
     BEGIN
-        -- Validar que sea SuperAdmin
         v_es_superadmin := PROYECTODB.AUTENTICACION_PKG.es_superadmin(p_usuario_id);
 
         IF NOT v_es_superadmin THEN
-            RAISE_APPLICATION_ERROR(-20604, 
-                'Solo SuperAdmin puede eliminar clientes');
+            RAISE_APPLICATION_ERROR(-20604,
+                                    'Solo SuperAdmin puede eliminar clientes');
         END IF;
 
-        -- Verificar si tiene cuentas asociadas
         SELECT COUNT(*) INTO v_count_cuentas
         FROM TBL_CUENTAS
         WHERE CLIENTE_ID = p_cliente_id;
 
         IF v_count_cuentas > 0 THEN
-            RAISE_APPLICATION_ERROR(-20605, 
-                'No se puede eliminar el cliente. Tiene ' || v_count_cuentas || ' cuenta(s) asociada(s)');
+            RAISE_APPLICATION_ERROR(-20605,
+                                    'No se puede eliminar el cliente. Tiene ' || v_count_cuentas || ' cuenta(s) asociada(s)');
         END IF;
 
-        -- Eliminar cliente
         DELETE FROM TBL_CLIENTES
         WHERE CLIENTE_ID = p_cliente_id;
 
@@ -241,9 +219,6 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE;
     END eliminar_cliente;
 
-    -- ====================================
-    -- PROCEDIMIENTO: Consultar Cliente
-    -- ====================================
     PROCEDURE consultar_cliente(
         p_cliente_id IN VARCHAR2
     ) IS
@@ -251,23 +226,22 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         v_total_cuentas NUMBER;
         v_saldo_total NUMBER;
     BEGIN
-        -- Obtener datos del cliente
         SELECT * INTO v_cliente
         FROM TBL_CLIENTES
         WHERE CLIENTE_ID = p_cliente_id;
 
-        -- Obtener estadísticas
         SELECT COUNT(*), NVL(SUM(SALDO), 0)
         INTO v_total_cuentas, v_saldo_total
         FROM TBL_CUENTAS
         WHERE CLIENTE_ID = p_cliente_id;
 
-        -- Mostrar información
         DBMS_OUTPUT.PUT_LINE('======= INFORMACIÓN DEL CLIENTE =======');
         DBMS_OUTPUT.PUT_LINE('ID Cliente: ' || v_cliente.CLIENTE_ID);
         DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_cliente.NOMBRE);
         DBMS_OUTPUT.PUT_LINE('Identificación: ' || v_cliente.IDENTIFICACION);
         DBMS_OUTPUT.PUT_LINE('Dirección: ' || v_cliente.DIRECCION);
+        DBMS_OUTPUT.PUT_LINE('Teléfono: ' || v_cliente.TELEFONO);
+        DBMS_OUTPUT.PUT_LINE('Email: ' || v_cliente.EMAIL);
         DBMS_OUTPUT.PUT_LINE('Usuario ID: ' || NVL(TO_CHAR(v_cliente.USUARIO_ID), 'N/A'));
         DBMS_OUTPUT.PUT_LINE('');
         DBMS_OUTPUT.PUT_LINE('--- RESUMEN FINANCIERO ---');
@@ -283,9 +257,6 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE;
     END consultar_cliente;
 
-    -- ====================================
-    -- FUNCIÓN: Buscar Cliente por Identificación
-    -- ====================================
     FUNCTION buscar_por_identificacion(
         p_identificacion IN NUMBER
     ) RETURN VARCHAR2 IS
@@ -304,18 +275,14 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RETURN NULL;
     END buscar_por_identificacion;
 
-    -- ====================================
-    -- FUNCIÓN: Listar Todos los Clientes
-    -- ====================================
     FUNCTION listar_clientes(
         p_filtro_nombre IN VARCHAR2 DEFAULT NULL
     ) RETURN SYS_REFCURSOR IS
         v_cursor SYS_REFCURSOR;
     BEGIN
         IF p_filtro_nombre IS NULL THEN
-            -- Listar todos
             OPEN v_cursor FOR
-                SELECT 
+                SELECT
                     C.CLIENTE_ID,
                     C.NOMBRE,
                     C.IDENTIFICACION,
@@ -323,13 +290,12 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
                     COUNT(CU.CUENTA_ID) AS TOTAL_CUENTAS,
                     NVL(SUM(CU.SALDO), 0) AS SALDO_TOTAL
                 FROM TBL_CLIENTES C
-                LEFT JOIN TBL_CUENTAS CU ON C.CLIENTE_ID = CU.CLIENTE_ID
+                         LEFT JOIN TBL_CUENTAS CU ON C.CLIENTE_ID = CU.CLIENTE_ID
                 GROUP BY C.CLIENTE_ID, C.NOMBRE, C.IDENTIFICACION, C.DIRECCION
                 ORDER BY C.CLIENTE_ID;
         ELSE
-            -- Filtrar por nombre
             OPEN v_cursor FOR
-                SELECT 
+                SELECT
                     C.CLIENTE_ID,
                     C.NOMBRE,
                     C.IDENTIFICACION,
@@ -337,7 +303,7 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
                     COUNT(CU.CUENTA_ID) AS TOTAL_CUENTAS,
                     NVL(SUM(CU.SALDO), 0) AS SALDO_TOTAL
                 FROM TBL_CLIENTES C
-                LEFT JOIN TBL_CUENTAS CU ON C.CLIENTE_ID = CU.CLIENTE_ID
+                         LEFT JOIN TBL_CUENTAS CU ON C.CLIENTE_ID = CU.CLIENTE_ID
                 WHERE UPPER(C.NOMBRE) LIKE '%' || UPPER(p_filtro_nombre) || '%'
                 GROUP BY C.CLIENTE_ID, C.NOMBRE, C.IDENTIFICACION, C.DIRECCION
                 ORDER BY C.CLIENTE_ID;
@@ -350,9 +316,6 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             RAISE_APPLICATION_ERROR(-20607, 'Error al listar clientes: ' || SQLERRM);
     END listar_clientes;
 
-    -- ====================================
-    -- PROCEDIMIENTO: Obtener Resumen del Cliente
-    -- ====================================
     PROCEDURE obtener_resumen_cliente(
         p_cliente_id IN VARCHAR2
     ) IS
@@ -360,29 +323,27 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
         DBMS_OUTPUT.PUT_LINE('===== RESUMEN COMPLETO DEL CLIENTE =====');
         DBMS_OUTPUT.PUT_LINE('');
 
-        -- Información básica
         consultar_cliente(p_cliente_id);
 
         DBMS_OUTPUT.PUT_LINE('');
         DBMS_OUTPUT.PUT_LINE('--- DETALLE DE CUENTAS ---');
 
-        -- Listar cuentas
         FOR rec IN (
-            SELECT 
+            SELECT
                 C.CUENTA_ID,
                 TP_TIPO.DESCRIPCION AS TIPO_CUENTA,
                 C.SALDO,
                 TP_ESTADO.DESCRIPCION AS ESTADO
             FROM TBL_CUENTAS C
-            JOIN TBL_TIPOS_PARAMETROS TP_TIPO ON C.TIPO_CUENTA_ID = TP_TIPO.TIPO_PARAMETRO_ID
-            JOIN TBL_TIPOS_PARAMETROS TP_ESTADO ON C.ESTADO_ID = TP_ESTADO.TIPO_PARAMETRO_ID
+                     JOIN TBL_TIPOS_PARAMETROS TP_TIPO ON C.TIPO_CUENTA_ID = TP_TIPO.TIPO_PARAMETRO_ID
+                     JOIN TBL_TIPOS_PARAMETROS TP_ESTADO ON C.ESTADO_ID = TP_ESTADO.TIPO_PARAMETRO_ID
             WHERE C.CLIENTE_ID = p_cliente_id
             ORDER BY C.SALDO DESC
-        ) LOOP
-            DBMS_OUTPUT.PUT_LINE('  • ' || rec.CUENTA_ID || ' | ' || 
-                rec.TIPO_CUENTA || ' | $' || TO_CHAR(rec.SALDO, 'FM999,999,999') || 
-                ' | ' || rec.ESTADO);
-        END LOOP;
+            ) LOOP
+                DBMS_OUTPUT.PUT_LINE('  • ' || rec.CUENTA_ID || ' | ' ||
+                                     rec.TIPO_CUENTA || ' | $' || TO_CHAR(rec.SALDO, 'FM999,999,999') ||
+                                     ' | ' || rec.ESTADO);
+            END LOOP;
 
         DBMS_OUTPUT.PUT_LINE('========================================');
 
@@ -391,9 +352,6 @@ CREATE OR REPLACE PACKAGE BODY PROYECTODB.gestion_clientes_pkg AS
             DBMS_OUTPUT.PUT_LINE('✗ Error: ' || SQLERRM);
     END obtener_resumen_cliente;
 
-    -- ====================================
-    -- FUNCIÓN: Validar si Cliente Existe
-    -- ====================================
     FUNCTION validar_cliente_existe(
         p_cliente_id IN VARCHAR2
     ) RETURN BOOLEAN IS

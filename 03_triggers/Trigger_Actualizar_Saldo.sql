@@ -54,9 +54,3 @@ EXCEPTION
             'Error al actualizar saldo: ' || SQLERRM);
 END;
 /
-
--- Mostrar estado del trigger
-SHOW ERRORS TRIGGER TRG_ACTUALIZA_SALDO;
-
--- Mensaje de confirmación
-PROMPT ✓ Trigger TRG_ACTUALIZA_SALDO creado exitosamente
